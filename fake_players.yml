@@ -1,0 +1,26 @@
+name: Fake Players Update
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 9:00 AM Bangladesh time (UTC+6)
+  workflow_dispatch:        # Manual trigger for testing
+
+jobs:
+  update-fake-players:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run fake player update
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+        run: python fake_players.py
