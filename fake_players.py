@@ -7,13 +7,13 @@ import urllib.request
 GIST_TOKEN = os.environ.get("GIST_TOKEN")
 GIST_ID    = os.environ.get("GIST_ID")
 
-# ── Fake players config ───────────────────────────────────────────────────────
+# ââ Fake players config âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 FAKE_PLAYERS = [
     {"id": "700000000000000001", "username": "7TH"},
     {"id": "700000000000000002", "username": "st1999"},
     {"id": "700000000000000003", "username": "Oyshi"},
 ]
-# ─────────────────────────────────────────────────────────────────────────────
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 def fetch_gist():
     req = urllib.request.Request(
@@ -56,13 +56,13 @@ def update_fake_player(data, player):
     yesterday = (datetime.datetime.utcnow() + datetime.timedelta(hours=6)
                  - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # ── Init score entry if new ───────────────────────────────────────────────
+    # ââ Init score entry if new âââââââââââââââââââââââââââââââââââââââââââââââ
     if uid not in scores:
         scores[uid] = {"username": username, "points": 0, "correct": 0, "total": 0, "subjects": {}}
     s = scores[uid]
     s["username"] = username  # keep name in sync
 
-    # ── Streak logic ──────────────────────────────────────────────────────────
+    # ââ Streak logic ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
     if uid not in streaks:
         streaks[uid] = {"streak": 0, "last_date": "", "_skip_after": random.randint(4, 10)}
     st = streaks[uid]
@@ -81,7 +81,7 @@ def update_fake_player(data, player):
 
     # Decide: participate today or skip (the 1 skip day)
     if current_streak >= skip_after:
-        # Skip today — streak resets, schedule next run length
+        # Skip today â streak resets, schedule next run length
         print(f"{username}: skip day (streak was {current_streak}). Resetting.")
         st["streak"]      = 0
         st["last_date"]   = today
@@ -89,7 +89,7 @@ def update_fake_player(data, player):
         # No score update on skip day
         return
 
-    # ── Score update ──────────────────────────────────────────────────────────
+    # ââ Score update ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
     total   = 10
     correct = random.randint(7, 9)   # 7, 8, or 9 correct out of 10
     points  = correct * 10
@@ -98,11 +98,11 @@ def update_fake_player(data, player):
     s["correct"] += correct
     s["points"]  += points
 
-    # ── Streak update ─────────────────────────────────────────────────────────
+    # ââ Streak update âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
     if st["last_date"] == yesterday:
         st["streak"] = current_streak + 1
     else:
-        st["streak"] = 1   # gap of more than 1 day — restart
+        st["streak"] = 1   # gap of more than 1 day â restart
     st["last_date"] = today
 
     print(f"{username}: +{correct}/{total} correct, +{points} pts | streak={st['streak']}/{skip_after}")
