@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fake Players Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --danger: #f85149;
+    --warning: #d29922;
+    --text: #e6edf3;
+    --muted: #8b949e;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+  }
+  .status-dot.connected { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .status-dot.error { background: var(--danger); }
+
+  .wrap {
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .card-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+
+  input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 1rem;
+  }
+  input:focus { border-color: var(--accent); }
+  input[type="password"] { font-family: monospace; letter-spacing: 2px; }
+
+  button {
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-success { background: var(--accent2); color: #000; }
+  .btn-danger  { background: var(--danger);  color: #fff; }
+  .btn-muted   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-full    { width: 100%; padding: 0.6rem; }
+
+  .alert {
+    padding: 0.65rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert-success { background: #1a3a2a; border: 1px solid var(--accent2); color: var(--accent2); }
+  .alert-error   { background: #3a1a1a; border: 1px solid var(--danger);  color: var(--danger); }
+  .alert-info    { background: #1a2a3a; border: 1px solid var(--accent);  color: var(--accent); }
+
+  .sep { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+  /* ── Player list ── */
+  .player-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+
+  .player-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem; color: #fff;
+    flex-shrink: 0;
+  }
+
+  .player-info { flex: 1; min-width: 0; }
+  .player-name { font-weight: 600; font-size: 0.9rem; }
+  .player-id   { font-size: 0.72rem; color: var(--muted); font-family: monospace; }
+
+  .player-stats {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .player-stats strong { color: var(--accent); font-size: 0.9rem; display: block; }
+
+  .player-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+  .player-row.editing { border-color: var(--accent); }
+
+  .edit-form {
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 1rem;
+    display: none;
+  }
+  .edit-form.show { display: block; }
+  .edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+  /* ── Add player form ── */
+  .add-form { display: none; }
+  .add-form.show { display: block; }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  .stat-val { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+  .stat-lbl { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+  .streak-badge {
+    display: inline-block;
+    background: #2a1a0a;
+    border: 1px solid var(--warning);
+    color: var(--warning);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .inactive-badge {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.72rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎭 Fake Players Admin</h1>
+  <span id="statusDot" class="status-dot"></span>
+</div>
+
+<div class="wrap">
+
+  <!-- ── CONNECT ── -->
+  <div class="card" id="setupCard">
+    <div class="card-title">🔑 GitHub Connection</div>
+    <div id="setupAlert" class="alert"></div>
+    <label>GitHub Token (needs repo + gist scopes)</label>
+    <input type="password" id="ghToken" placeholder="ghp_...">
+    <label>Repo (e.g. mim-makes-monsters/Opt)</label>
+    <input type="text" id="ghRepo" placeholder="username/repo-name">
+    <button class="btn-primary btn-full" onclick="connect()">Connect</button>
+  </div>
+
+  <!-- ── PLAYERS ── -->
+  <div class="card" id="playersCard" style="display:none">
+    <div class="card-title">👥 Fake Players</div>
+    <div id="playersAlert" class="alert"></div>
+
+    <div id="playerList" class="player-list"></div>
+
+    <hr class="sep">
+
+    <!-- Add new player -->
+    <button class="btn-muted btn-full" onclick="toggleAddForm()" id="addBtn">＋ Add New Player</button>
+    <div class="add-form" id="addForm">
+      <br>
+      <div class="edit-row">
+        <div>
+          <label>Username</label>
+          <input type="text" id="newName" placeholder="e.g. NewPlayer">
+        </div>
+        <div>
+          <label>Fake Discord ID (optional)</label>
+          <input type="text" id="newId" placeholder="auto-generated">
+        </div>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn-success" style="flex:1" onclick="addPlayer()">Add Player</button>
+        <button class="btn-muted" style="flex:1" onclick="toggleAddForm()">Cancel</button>
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <button class="btn-primary btn-full" onclick="savePlayers()">💾 Save Changes to fake_players.py</button>
+  </div>
+
+  <!-- ── GIST STATS ── -->
+  <div class="card" id="statsCard" style="display:none">
+    <div class="card-title">📊 Live Gist Stats</div>
+    <div id="statsAlert" class="alert"></div>
+    <div id="statsGrid" class="stats-grid"></div>
+    <div id="statsDetail" class="player-list"></div>
+    <br>
+    <button class="btn-muted btn-full" onclick="loadStats()">↻ Refresh from Gist</button>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+const STATE = { token: '', repo: '', botSha: '', players: [], gistId: '', gistToken: '' };
+
+// ── PERSIST ───────────────────────────────────────────────────────────────
+function saveLocal() {
+  localStorage.setItem('fp_token', STATE.token);
+  localStorage.setItem('fp_repo',  STATE.repo);
+}
+function loadLocal() {
+  STATE.token = localStorage.getItem('fp_token') || '';
+  STATE.repo  = localStorage.getItem('fp_repo')  || '';
+  if (STATE.token) document.getElementById('ghToken').value = STATE.token;
+  if (STATE.repo)  document.getElementById('ghRepo').value  = STATE.repo;
+}
+
+// ── ALERTS ────────────────────────────────────────────────────────────────
+function showAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = `alert alert-${type} show`;
+  el.textContent = msg;
+}
+function hideAlert(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ── CONNECT ───────────────────────────────────────────────────────────────
+async function connect() {
+  STATE.token = document.getElementById('ghToken').value.trim();
+  STATE.repo  = document.getElementById('ghRepo').value.trim();
+  if (!STATE.token || !STATE.repo) {
+    showAlert('setupAlert', 'error', '❌ Fill in both fields.');
+    return;
+  }
+  showAlert('setupAlert', 'info', '⏳ Connecting...');
+  try {
+    // Verify repo access
+    const res = await fetch(`https://api.github.com/repos/${STATE.repo}`, {
+      headers: { Authorization: `token ${STATE.token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error(`Repo not found or bad token (${res.status})`);
+
+    // Load fake_players.py
+    await loadPlayersFromRepo();
+    saveLocal();
+    showAlert('setupAlert', 'success', '✅ Connected!');
+    document.getElementById('statusDot').className = 'status-dot connected';
+    document.getElementById('playersCard').style.display = '';
+    document.getElementById('statsCard').style.display = '';
+    await loadStats();
+  } catch(e) {
+    showAlert('setupAlert', 'error', `❌ ${e.message}`);
+    document.getElementById('statusDot').className = 'status-dot error';
+  }
+}
+
+// ── LOAD PLAYERS FROM REPO ────────────────────────────────────────────────
+async function loadPlayersFromRepo() {
+  const res = await fetch(`https://api.github.com/repos/${STATE.repo}/contents/fake_players.py`, {
+    headers: { Authorization: `token ${STATE.token}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if (!res.ok) throw new Error(`fake_players.py not found (${res.status})`);
+  const data = await res.json();
+  STATE.botSha = data.sha;
+  const content = atob(data.content.replace(/\n/g, ''));
+
+  // Also grab GIST_ID/GIST_TOKEN from repo secrets indirectly via workflow — 
+  // we'll just parse players from the FAKE_PLAYERS list
+  const match = content.match(/FAKE_PLAYERS\s*=\s*\[([\s\S]*?)\]/);
+  STATE.players = [];
+  if (match) {
+    const block = match[1];
+    const rows = [...block.matchAll(/\{\s*"id"\s*:\s*"([^"]+)"\s*,\s*"username"\s*:\s*"([^"]+)"\s*\}/g)];
+    STATE.players = rows.map(r => ({ id: r[1], username: r[2] }));
+  }
+  renderPlayers();
+}
+
+// ── RENDER PLAYERS ────────────────────────────────────────────────────────
+function renderPlayers() {
+  const list = document.getElementById('playerList');
+  if (STATE.players.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:1rem;">No fake players yet</div>';
+    return;
+  }
+  list.innerHTML = STATE.players.map((p, i) => `
+    <div class="player-row" id="prow_${i}">
+      <div class="player-avatar">${p.username.charAt(0).toUpperCase()}</div>
+      <div class="player-info">
+        <div class="player-name">${escHtml(p.username)}</div>
+        <div class="player-id">${p.id}</div>
+      </div>
+      <div class="player-actions">
+        <button class="btn-muted" onclick="startEdit(${i})" style="padding:0.3rem 0.6rem;font-size:0.78rem;">✏️</button>
+        <button class="btn-danger" onclick="removePlayer(${i})" style="padding:0.3rem 0.6rem;font-size:0.78rem;">🗑</button>
+      </div>
+    </div>
+    <div class="edit-form" id="editForm_${i}">
+      <div class="edit-row">
+        <div>
+          <label>Username</label>
+          <input type="text" id="editName_${i}" value="${escHtml(p.username)}">
+        </div>
+        <div>
+          <label>Fake Discord ID</label>
+          <input type="text" id="editId_${i}" value="${p.id}">
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn-success" style="flex:1" onclick="saveEdit(${i})">Save</button>
+        <button class="btn-muted" style="flex:1" onclick="cancelEdit(${i})">Cancel</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function startEdit(i) {
+  document.getElementById(`editForm_${i}`).classList.add('show');
+  document.getElementById(`prow_${i}`).classList.add('editing');
+}
+function cancelEdit(i) {
+  document.getElementById(`editForm_${i}`).classList.remove('show');
+  document.getElementById(`prow_${i}`).classList.remove('editing');
+}
+function saveEdit(i) {
+  STATE.players[i].username = document.getElementById(`editName_${i}`).value.trim() || STATE.players[i].username;
+  STATE.players[i].id       = document.getElementById(`editId_${i}`).value.trim()   || STATE.players[i].id;
+  renderPlayers();
+}
+function removePlayer(i) {
+  const name = STATE.players[i].username;
+  if (!confirm(`Remove ${name}? This only removes them from the daily update script — their gist record stays until you manually delete it.`)) return;
+  STATE.players.splice(i, 1);
+  renderPlayers();
+}
+function toggleAddForm() {
+  const f = document.getElementById('addForm');
+  f.classList.toggle('show');
+  if (f.classList.contains('show')) {
+    document.getElementById('newName').value = '';
+    document.getElementById('newId').value   = '';
+  }
+}
+function addPlayer() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { showAlert('playersAlert', 'error', '❌ Enter a username.'); return; }
+  // Generate a fake snowflake-style ID
+  const id = document.getElementById('newId').value.trim() ||
+    '7' + String(Date.now()).slice(-16).padStart(17, '0');
+  STATE.players.push({ id, username: name });
+  toggleAddForm();
+  hideAlert('playersAlert');
+  renderPlayers();
+}
+
+// ── BUILD FAKE_PLAYERS.PY CONTENT ─────────────────────────────────────────
+function buildPyContent(original) {
+  // Reconstruct FAKE_PLAYERS list
+  const lines = STATE.players.map(p =>
+    `    {"id": "${p.id}", "username": "${p.username}"},`
+  ).join('\n');
+  const newBlock = `FAKE_PLAYERS = [\n${lines}\n]`;
+  return original.replace(/FAKE_PLAYERS\s*=\s*\[[\s\S]*?\]/, newBlock);
+}
+
+// ── SAVE PLAYERS TO REPO ──────────────────────────────────────────────────
+async function savePlayers() {
+  showAlert('playersAlert', 'info', '⏳ Saving fake_players.py to repo...');
+  try {
+    // Fetch current content again to get latest sha + content
+    const res = await fetch(`https://api.github.com/repos/${STATE.repo}/contents/fake_players.py`, {
+      headers: { Authorization: `token ${STATE.token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
+    const fileData = await res.json();
+    STATE.botSha = fileData.sha;
+    const original = atob(fileData.content.replace(/\n/g, ''));
+    const updated  = buildPyContent(original);
+
+    const putRes = await fetch(`https://api.github.com/repos/${STATE.repo}/contents/fake_players.py`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${STATE.token}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Update fake players list (${STATE.players.map(p => p.username).join(', ')})`,
+        content: btoa(unescape(encodeURIComponent(updated))),
+        sha: STATE.botSha
+      })
+    });
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || `Save failed (${putRes.status})`);
+    }
+    showAlert('playersAlert', 'success', `✅ Saved! ${STATE.players.length} player(s) active.`);
+  } catch(e) {
+    showAlert('playersAlert', 'error', `❌ ${e.message}`);
+  }
+}
+
+// ── LOAD GIST STATS ───────────────────────────────────────────────────────
+async function loadStats() {
+  // We need GIST_ID — prompt user if not set
+  if (!STATE.gistId) {
+    STATE.gistId = prompt('Enter your Gist ID (from your main account):') || '';
+    if (!STATE.gistId) return;
+  }
+  if (!STATE.gistToken) {
+    STATE.gistToken = prompt('Enter a Gist token (from your MAIN account, gist scope):') || '';
+    if (!STATE.gistToken) return;
+  }
+
+  showAlert('statsAlert', 'info', '⏳ Fetching gist...');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${STATE.gistId}`, {
+      headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error(`Gist fetch failed (${res.status})`);
+    const data  = await res.json();
+    const raw   = JSON.parse(data.files['scores.json'].content);
+    const scores = raw.scores || {};
+    const streaks = raw.streaks || {};
+
+    // Filter to only fake players
+    const fakeIds = STATE.players.map(p => p.id);
+    const fakeScores = Object.entries(scores).filter(([id]) => fakeIds.includes(id));
+
+    // Summary stats
+    const totalPts = fakeScores.reduce((s, [, v]) => s + (v.points || 0), 0);
+    const totalQ   = fakeScores.reduce((s, [, v]) => s + (v.total   || 0), 0);
+    const totalC   = fakeScores.reduce((s, [, v]) => s + (v.correct || 0), 0);
+    const acc      = totalQ > 0 ? Math.round(100 * totalC / totalQ) : 0;
+
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-box"><div class="stat-val">${fakeScores.length}</div><div class="stat-lbl">Active Players</div></div>
+      <div class="stat-box"><div class="stat-val">${totalPts}</div><div class="stat-lbl">Total Points</div></div>
+      <div class="stat-box"><div class="stat-val">${acc}%</div><div class="stat-lbl">Avg Accuracy</div></div>
+    `;
+
+    // Per-player detail
+    document.getElementById('statsDetail').innerHTML = fakeScores.map(([id, s]) => {
+      const streak = streaks[id] || {};
+      const sacc   = s.total > 0 ? Math.round(100 * s.correct / s.total) : 0;
+      const skipAfter = streak._skip_after || '?';
+      const streakBadge = streak.streak > 0
+        ? `<span class="streak-badge">🔥 ${streak.streak}/${skipAfter} days</span>`
+        : `<span class="inactive-badge">Skip day</span>`;
+      return `
+        <div class="player-row">
+          <div class="player-avatar">${(s.username||'?').charAt(0).toUpperCase()}</div>
+          <div class="player-info">
+            <div class="player-name">${escHtml(s.username || id)}</div>
+            <div class="player-id">Last active: ${streak.last_date || 'never'} &nbsp;${streakBadge}</div>
+          </div>
+          <div class="player-stats">
+            <strong>${s.points || 0} pts</strong>
+            ${s.correct||0}/${s.total||0} &nbsp; ${sacc}%
+          </div>
+        </div>
+      `;
+    }).join('') || '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem;">No fake player data in gist yet</div>';
+
+    hideAlert('statsAlert');
+  } catch(e) {
+    showAlert('statsAlert', 'error', `❌ ${e.message}`);
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+loadLocal();
+</script>
+</body>
+</html>
