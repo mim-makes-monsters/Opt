@@ -355,7 +355,13 @@ async function connect() {
     document.getElementById('statusDot').className = 'status-dot connected';
     document.getElementById('playersCard').style.display = '';
     document.getElementById('statsCard').style.display = '';
-    await loadStats();
+    // Show gist creds form if not yet saved, otherwise load stats
+    if (!STATE.gistId || !STATE.gistToken) {
+      document.getElementById('gistCredsForm').style.display = '';
+      showAlert('statsAlert', 'info', 'ℹ️ Enter your main account Gist credentials below to view live stats.');
+    } else {
+      await loadStats();
+    }
   } catch(e) {
     showAlert('setupAlert', 'error', `❌ ${e.message}`);
     document.getElementById('statusDot').className = 'status-dot error';
@@ -585,6 +591,8 @@ async function loadStats() {
     hideAlert('statsAlert');
   } catch(e) {
     showAlert('statsAlert', 'error', `❌ ${e.message}`);
+    // If fetch failed, credentials may be wrong — show the form
+    document.getElementById('gistCredsForm').style.display = '';
   }
 }
 
@@ -599,6 +607,8 @@ loadLocal();
 window.addEventListener('DOMContentLoaded', () => {
   if (STATE.gistId)    { const el = document.getElementById('gistIdInput');    if(el) el.value = STATE.gistId; }
   if (STATE.gistToken) { const el = document.getElementById('gistTokenInput'); if(el) el.value = STATE.gistToken; }
+  // Auto-connect if credentials already saved
+  if (STATE.token && STATE.repo) connect();
 });
 </script>
 </body>
