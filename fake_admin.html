@@ -543,7 +543,14 @@ async function loadStats() {
     const res = await fetch(`https://api.github.com/gists/${STATE.gistId}?t=${Date.now()}`, {
       headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
     });
-    if (!res.ok) throw new Error(`Gist fetch failed (${res.status})`);
+    if (!res.ok) {
+      let errMsg = `Gist fetch failed (${res.status})`;
+      try { const j = await res.json(); errMsg += `: ${j.message}`; } catch(_) {}
+      if (res.status === 401) errMsg += ' — token is invalid or expired';
+      if (res.status === 403) errMsg += ' — token lacks gist scope';
+      if (res.status === 404) errMsg += ' — Gist ID not found or token cannot access it';
+      throw new Error(errMsg);
+    }
     const data  = await res.json();
     const raw   = JSON.parse(data.files['scores.json'].content);
     const scores = raw.scores || {};
