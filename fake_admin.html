@@ -552,7 +552,7 @@ async function loadStats() {
   try {
     const url = `https://api.github.com/gists/${STATE.gistId}?t=${Date.now()}`;
     const res = await fetch(url, {
-      headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
+      headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json' }
     });
     if (!res.ok) {
       let errMsg = `Gist fetch failed (${res.status})`;
