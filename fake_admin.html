@@ -399,9 +399,9 @@ function renderPlayers() {
   }
   list.innerHTML = STATE.players.map((p, i) => `
     <div class="player-row" id="prow_${i}">
-      <div class="player-avatar">${p.username.charAt(0).toUpperCase()}</div>
+      <div class="player-avatar">${[...p.username][0].toUpperCase()}</div>
       <div class="player-info">
-        <div class="player-name">${escHtml(p.username)}</div>
+        <div class="player-name" data-name="${escHtml(p.username)}">${escHtml(p.username)}</div>
         <div class="player-id">${p.id}</div>
       </div>
       <div class="player-actions">
@@ -500,7 +500,7 @@ async function savePlayers() {
       },
       body: JSON.stringify({
         message: `Update fake players list (${STATE.players.map(p => p.username).join(', ')})`,
-        content: btoa(unescape(encodeURIComponent(updated))),
+        content: btoa(encodeURIComponent(updated).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode('0x' + p1))),
         sha: STATE.botSha
       })
     });
@@ -538,9 +538,20 @@ async function loadStats() {
   document.getElementById('gistCredsForm').style.display = 'none';
   saveLocal();
 
-  showAlert('statsAlert', 'info', '⏳ Fetching gist...');
+  // Trim whitespace from credentials before using
+  STATE.gistId    = STATE.gistId.trim();
+  STATE.gistToken = STATE.gistToken.trim();
+
+  if (!STATE.gistId || !STATE.gistToken) {
+    document.getElementById('gistCredsForm').style.display = '';
+    showAlert('statsAlert', 'error', '❌ Gist ID or token is empty — enter them below.');
+    return;
+  }
+
+  showAlert('statsAlert', 'info', `⏳ Fetching gist (ID: ${STATE.gistId.slice(0,8)}...)...`);
   try {
-    const res = await fetch(`https://api.github.com/gists/${STATE.gistId}?t=${Date.now()}`, {
+    const url = `https://api.github.com/gists/${STATE.gistId}?t=${Date.now()}`;
+    const res = await fetch(url, {
       headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
     });
     if (!res.ok) {
@@ -597,8 +608,11 @@ async function loadStats() {
 
     hideAlert('statsAlert');
   } catch(e) {
-    showAlert('statsAlert', 'error', `❌ ${e.message}`);
-    // If fetch failed, credentials may be wrong — show the form
+    let msg = e.message;
+    if (e instanceof TypeError) {
+      msg = `Network error — Gist ID may be invalid or malformed. ID used: "${STATE.gistId}"`;
+    }
+    showAlert('statsAlert', 'error', `❌ ${msg}`);
     document.getElementById('gistCredsForm').style.display = '';
   }
 }
