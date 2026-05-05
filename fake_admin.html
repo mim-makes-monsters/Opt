@@ -286,6 +286,14 @@
   <div class="card" id="statsCard" style="display:none">
     <div class="card-title">📊 Live Gist Stats</div>
     <div id="statsAlert" class="alert"></div>
+    <div id="gistCredsForm" style="display:none; margin-bottom:1rem;">
+      <label>Main Account Gist ID</label>
+      <input type="text" id="gistIdInput" placeholder="abc123...">
+      <label>Main Account Gist Token (gist scope)</label>
+      <input type="password" id="gistTokenInput" placeholder="ghp_...">
+      <button class="btn-primary btn-full" onclick="saveGistCreds()">Save & Load Stats</button>
+      <br><br>
+    </div>
     <div id="statsGrid" class="stats-grid"></div>
     <div id="statsDetail" class="player-list"></div>
     <br>
@@ -300,12 +308,16 @@ const STATE = { token: '', repo: '', botSha: '', players: [], gistId: '', gistTo
 
 // ── PERSIST ───────────────────────────────────────────────────────────────
 function saveLocal() {
-  localStorage.setItem('fp_token', STATE.token);
-  localStorage.setItem('fp_repo',  STATE.repo);
+  localStorage.setItem('fp_token',      STATE.token);
+  localStorage.setItem('fp_repo',       STATE.repo);
+  localStorage.setItem('fp_gist_id',    STATE.gistId);
+  localStorage.setItem('fp_gist_token', STATE.gistToken);
 }
 function loadLocal() {
-  STATE.token = localStorage.getItem('fp_token') || '';
-  STATE.repo  = localStorage.getItem('fp_repo')  || '';
+  STATE.token      = localStorage.getItem('fp_token')      || '';
+  STATE.repo       = localStorage.getItem('fp_repo')       || '';
+  STATE.gistId     = localStorage.getItem('fp_gist_id')    || '';
+  STATE.gistToken  = localStorage.getItem('fp_gist_token') || '';
   if (STATE.token) document.getElementById('ghToken').value = STATE.token;
   if (STATE.repo)  document.getElementById('ghRepo').value  = STATE.repo;
 }
@@ -497,21 +509,33 @@ async function savePlayers() {
 }
 
 // ── LOAD GIST STATS ───────────────────────────────────────────────────────
+function saveGistCreds() {
+  STATE.gistId    = document.getElementById('gistIdInput').value.trim();
+  STATE.gistToken = document.getElementById('gistTokenInput').value.trim();
+  if (!STATE.gistId || !STATE.gistToken) {
+    showAlert('statsAlert', 'error', '❌ Both fields are required.');
+    return;
+  }
+  saveLocal();
+  loadStats();
+}
+
 async function loadStats() {
-  // We need GIST_ID — prompt user if not set
-  if (!STATE.gistId) {
-    STATE.gistId = prompt('Enter your Gist ID (from your main account):') || '';
-    if (!STATE.gistId) return;
+  // Use saved credentials or ask via UI fields
+  if (!STATE.gistId) STATE.gistId = document.getElementById('gistIdInput').value.trim();
+  if (!STATE.gistToken) STATE.gistToken = document.getElementById('gistTokenInput').value.trim();
+  if (!STATE.gistId || !STATE.gistToken) {
+    document.getElementById('gistCredsForm').style.display = '';
+    showAlert('statsAlert', 'error', '❌ Enter your Gist ID and token below first.');
+    return;
   }
-  if (!STATE.gistToken) {
-    STATE.gistToken = prompt('Enter a Gist token (from your MAIN account, gist scope):') || '';
-    if (!STATE.gistToken) return;
-  }
+  document.getElementById('gistCredsForm').style.display = 'none';
+  saveLocal();
 
   showAlert('statsAlert', 'info', '⏳ Fetching gist...');
   try {
-    const res = await fetch(`https://api.github.com/gists/${STATE.gistId}`, {
-      headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json' }
+    const res = await fetch(`https://api.github.com/gists/${STATE.gistId}?t=${Date.now()}`, {
+      headers: { Authorization: `token ${STATE.gistToken}`, Accept: 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
     });
     if (!res.ok) throw new Error(`Gist fetch failed (${res.status})`);
     const data  = await res.json();
@@ -571,6 +595,11 @@ function escHtml(s) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 loadLocal();
+// Pre-fill gist fields if saved, hide creds form if already have them
+window.addEventListener('DOMContentLoaded', () => {
+  if (STATE.gistId)    { const el = document.getElementById('gistIdInput');    if(el) el.value = STATE.gistId; }
+  if (STATE.gistToken) { const el = document.getElementById('gistTokenInput'); if(el) el.value = STATE.gistToken; }
+});
 </script>
 </body>
 </html>
